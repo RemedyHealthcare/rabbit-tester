@@ -34,7 +34,7 @@ func rabbitRun(chn *amqp.Channel) {
 			})
 		failOnError(err, "Failed to publish a message")
 		log.Printf(" [x] Sent ping")
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(5000 * time.Millisecond)
 	}
 }
 
