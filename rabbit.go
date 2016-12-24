@@ -37,7 +37,7 @@ func rabbitRun(chn *amqp.Channel) {
 		if err == nil {
 			log.Printf(" [x] Sent ping")
 		}
-		time.Sleep(35000 * time.Millisecond)
+		time.Sleep(60000 * time.Millisecond)
 	}
 }
 
