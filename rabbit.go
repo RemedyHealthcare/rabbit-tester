@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/streadway/amqp"
+	"github.com/RemedyHealthcare/amqp"
 )
 
 func failOnError(err error, msg string) {
