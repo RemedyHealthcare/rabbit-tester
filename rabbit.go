@@ -34,7 +34,9 @@ func rabbitRun(chn *amqp.Channel) {
 				Body:        []byte("ping"),
 			})
 		failOnError(err, "Failed to publish a message")
-		log.Printf(" [x] Sent ping")
+		if err == nil {
+			log.Printf(" [x] Sent ping")
+		}
 		time.Sleep(5000 * time.Millisecond)
 	}
 }
@@ -46,7 +48,7 @@ func main() {
 	}
 	conn, err := amqp.DialConfig(rabbitURL, amqp.Config{Heartbeat: time.Second * 580,
 		Dial: func(network, addr string) (net.Conn, error) {
-			return net.DialTimeout(network, addr, 0*time.Second)
+			return net.DialTimeout(network, addr, 120*time.Second)
 		},
 	})
 	failOnError(err, "Failed to connect to RabbitMQ")
