@@ -7,13 +7,18 @@ import (
 	"os"
 	"time"
 
-	"github.com/RemedyHealthcare/amqp"
+	"github.com/streadway/amqp"
 )
+
+type Hub struct {
+	Conn *amqp.Connection
+	Chn  *amqp.Channel
+}
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		log.Printf("%s: %s", msg, err)
-		// panic(fmt.Sprintf("%s: %s", msg, err))
+		log.Fatalf("%s: %s", msg, err)
+		panic(fmt.Sprintf("%s: %s", msg, err))
 	}
 }
 
@@ -21,9 +26,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hi there, I love the world!")
 }
 
-func rabbitRun(chn *amqp.Channel) {
+func rabbitRun(h *Hub) {
 	for {
-		err := chn.Publish(
+		err := h.Chn.Publish(
 			"logs", // exchange
 			"",     // routing key
 			false,  // mandatory
@@ -32,11 +37,27 @@ func rabbitRun(chn *amqp.Channel) {
 				ContentType: "text/plain",
 				Body:        []byte("ping"),
 			})
-		failOnError(err, "Failed to publish a message")
-		if err == nil {
+		if err != nil {
+			h.Chn, err = h.Conn.Channel()
+			failOnError(err, "Failed to open a channel")
+			err = h.Chn.Publish(
+				"logs", // exchange
+				"",     // routing key
+				false,  // mandatory
+				false,  // immediate
+				amqp.Publishing{
+					ContentType: "text/plain",
+					Body:        []byte("ping"),
+				})
+			failOnError(err, "Failed to publish even after recovering channel")
+			if err != nil {
+				log.Printf(" [x] SUCCESSFUL CHANNEL RECOVERY")
+				log.Printf(" [x] Sent ping")
+			}
+		} else {
 			log.Printf(" [x] Sent ping")
 		}
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 	}
 }
 
@@ -45,15 +66,19 @@ func main() {
 	if rabbitURL == "" {
 		rabbitURL = "amqp://guest:guest@localhost:5672/"
 	}
+
 	conn, err := amqp.Dial(rabbitURL)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
-	chn, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer chn.Close()
+	var hub Hub
+	hub.Conn = conn
 
-	_, err = chn.QueueDelete(
+	hub.Chn, err = hub.Conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer hub.Chn.Close()
+
+	_, err = hub.Chn.QueueDelete(
 		"logs",
 		false,
 		false,
@@ -61,7 +86,7 @@ func main() {
 	)
 	failOnError(err, "Failed to delete old exchange")
 
-	err = chn.ExchangeDeclare(
+	err = hub.Chn.ExchangeDeclare(
 		"logs",   // name
 		"fanout", // type
 		true,     // durable
@@ -72,7 +97,7 @@ func main() {
 	)
 	failOnError(err, "Failed to declare an exchange")
 
-	go rabbitRun(chn)
+	go rabbitRun(&hub)
 
 	http.HandleFunc("/", handler)
 	http.ListenAndServe(":8080", nil)
