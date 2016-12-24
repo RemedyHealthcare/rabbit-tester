@@ -43,7 +43,7 @@ func main() {
 	if rabbitURL == "" {
 		rabbitURL = "amqp://guest:guest@localhost:5672/"
 	}
-	conn, err := amqp.DialConfig(rabbitURL, amqp.Config{Heartbeat: time.Second * 60})
+	conn, err := amqp.DialConfig(rabbitURL, amqp.Config{Heartbeat: time.Second * 580})
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
