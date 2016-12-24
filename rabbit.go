@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"time"
@@ -37,7 +36,7 @@ func rabbitRun(chn *amqp.Channel) {
 		if err == nil {
 			log.Printf(" [x] Sent ping")
 		}
-		time.Sleep(60000 * time.Millisecond)
+		time.Sleep(5000 * time.Millisecond)
 	}
 }
 
@@ -46,11 +45,7 @@ func main() {
 	if rabbitURL == "" {
 		rabbitURL = "amqp://guest:guest@localhost:5672/"
 	}
-	conn, err := amqp.DialConfig(rabbitURL, amqp.Config{Heartbeat: time.Second * 580,
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.DialTimeout(network, addr, 120*time.Second)
-		},
-	})
+	conn, err := amqp.Dial(rabbitURL)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
