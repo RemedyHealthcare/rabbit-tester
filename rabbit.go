@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -43,7 +44,11 @@ func main() {
 	if rabbitURL == "" {
 		rabbitURL = "amqp://guest:guest@localhost:5672/"
 	}
-	conn, err := amqp.DialConfig(rabbitURL, amqp.Config{Heartbeat: time.Second * 580})
+	conn, err := amqp.DialConfig(rabbitURL, amqp.Config{Heartbeat: time.Second * 580,
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.DialTimeout(network, addr, 0*time.Second)
+		},
+	})
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
